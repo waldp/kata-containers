@@ -1293,6 +1293,14 @@ pub struct NetworkInfo {
     /// Configures the number of network queues.
     #[serde(default)]
     pub network_queues: u32,
+
+    /// Enables checksum offload, TSO and UFO on virtio-net devices.
+    ///
+    /// Only used by Cloud Hypervisor, which turns these offloads off by
+    /// default since v54.0. Enable them only on host kernels that include
+    /// Linux commit 6785011f8b16 (CVE-2026-99999).
+    #[serde(default)]
+    pub enable_network_offloads: bool,
 }
 
 impl NetworkInfo {
@@ -2323,6 +2331,18 @@ mod tests {
             assert_eq!(config.blockdev_info.block_device_read_only_slots, expected);
         }
         assert_eq!(BlockDeviceInfo::default().block_device_read_only_slots, 1);
+    }
+
+    #[test]
+    fn test_enable_network_offloads_config() {
+        for (input, expected) in [
+            ("", false),
+            ("enable_network_offloads = false", false),
+            ("enable_network_offloads = true", true),
+        ] {
+            let config: Hypervisor = toml::from_str(input).unwrap();
+            assert_eq!(config.network_info.enable_network_offloads, expected);
+        }
     }
 
     #[test]

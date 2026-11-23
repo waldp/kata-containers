@@ -225,6 +225,18 @@ num_queues = 1
 # Default: 1, Range: 1..=256
 network_queues = @DEFNETQUEUES@
 
+# enable_network_offloads turns on checksum offload, TSO and UFO for the
+# virtio-net devices (Cloud Hypervisor's offload_csum, offload_tso and
+# offload_ufo, which are set together). Cloud Hypervisor turns them off by
+# default since v54.0, to protect hosts from a Linux kernel bug with
+# guest-supplied checksum offsets (CVE-2026-99999).
+# Only enable this on host kernels that include the fix, Linux commit
+# 6785011f8b16 ("ipv4: validate checksum_start before completing checksum").
+# Enabling it restores bulk TCP throughput and lowers the host CPU cost of
+# guest networking.
+# Default false
+enable_network_offloads = false
+
 # Enable pre allocation of VM RAM, default false
 # Enabling this will result in lower container density
 # as all of the memory will be allocated and locked

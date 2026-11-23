@@ -329,6 +329,12 @@ pub struct NetConfig {
     #[serde(default)]
     #[serde(skip_serializing_if = "u16_is_zero")]
     pub pci_segment: u16,
+    #[serde(default)]
+    pub offload_tso: bool,
+    #[serde(default)]
+    pub offload_ufo: bool,
+    #[serde(default)]
+    pub offload_csum: bool,
 }
 
 impl Default for NetConfig {
@@ -350,6 +356,9 @@ impl Default for NetConfig {
             fds: None,
             rate_limiter_config: None,
             pci_segment: 0,
+            offload_tso: false,
+            offload_ufo: false,
+            offload_csum: false,
         }
     }
 }
@@ -641,6 +650,22 @@ mod tests {
             serde_json::from_str::<IommuType>("\"Smmuv3\"").unwrap(),
             IommuType::Smmuv3
         );
+    }
+
+    #[test]
+    fn test_net_config_offloads_serialization() {
+        for enabled in [false, true] {
+            let net = NetConfig {
+                offload_tso: enabled,
+                offload_ufo: enabled,
+                offload_csum: enabled,
+                ..Default::default()
+            };
+            let json = serde_json::to_value(&net).unwrap();
+            for field in ["offload_tso", "offload_ufo", "offload_csum"] {
+                assert_eq!(json[field], enabled, "{field}");
+            }
+        }
     }
 
     #[test]

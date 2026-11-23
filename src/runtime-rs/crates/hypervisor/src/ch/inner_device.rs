@@ -363,6 +363,10 @@ impl CloudHypervisorInner {
         // When using fds to pass the tap device to cloud-hypervisor, tap and id fields should be None
         clh_net_config.tap = None;
         clh_net_config.id = None;
+        set_network_offloads(
+            &mut clh_net_config,
+            self.config.network_info.enable_network_offloads,
+        );
         let files = open_named_tuntap(&netdev.config.host_dev_name, netdev.config.queue_num as u32)
             .context("open named tuntap")?;
 
@@ -414,6 +418,10 @@ impl CloudHypervisorInner {
                     // When using fds to pass the tap device to cloud-hypervisor, tap and id fields should be None
                     net_config.tap = None;
                     net_config.id = None;
+                    set_network_offloads(
+                        &mut net_config,
+                        self.config.network_info.enable_network_offloads,
+                    );
 
                     info!(
                         sl!(),
@@ -488,6 +496,14 @@ impl CloudHypervisorInner {
             Some(boot_disks),
         ))
     }
+}
+
+// Cloud Hypervisor rejects TSO or UFO without checksum offload, so the three
+// offloads are always set together.
+fn set_network_offloads(net_config: &mut NetConfig, enable: bool) {
+    net_config.offload_csum = enable;
+    net_config.offload_tso = enable;
+    net_config.offload_ufo = enable;
 }
 
 impl TryFrom<NetworkConfig> for NetConfig {
@@ -796,6 +812,18 @@ mod tests {
         let net = NetConfig::try_from(cfg);
         assert!(net.is_ok());
         assert_eq!(net.unwrap(), expected);
+    }
+
+    #[rstest]
+    #[case(false)]
+    #[case(true)]
+    fn test_set_network_offloads(#[case] enable: bool) {
+        let mut net = NetConfig::default();
+        set_network_offloads(&mut net, enable);
+        assert_eq!(
+            (net.offload_csum, net.offload_tso, net.offload_ufo),
+            (enable, enable, enable)
+        );
     }
 
     #[tokio::test]
